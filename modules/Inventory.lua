@@ -2,9 +2,9 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 
-local Signal = require(ReplicatedStorage.Signal)
-local Util = require(ReplicatedStorage.UtilityPlus)
-local ManagerMS = require(script.Manager)
+local Signal = require(ReplicatedStorage.Signal) -- Change accordingly
+local Util = require(ReplicatedStorage.UtilityPlus) -- Change accordingly
+local ManagerMS = require(script.Manager) -- Change accordingly
 
 main_notation = {
 	_get_save_location = function(player: Player) return require(ReplicatedStorage.ProfileManager).Profiles[player].Data end;
