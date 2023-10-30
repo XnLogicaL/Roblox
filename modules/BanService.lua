@@ -1,4 +1,4 @@
--- @XnLogical 17/09/2023
+-- @XnLogical 17/09/2023 (OUTDATED CODE, REMAKE SOON)
 local Players = game:GetService("Players")
 local DatastoreService = game:GetService("DataStoreService")
 local Database = DatastoreService:GetDataStore("BanData")
