@@ -17,7 +17,7 @@ export type Inventory = {
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
-
+--// DEPENDENCIES, CHANGE ACCORDINGLY
 local Signal = require(script.Parent.signal)
 local Util = require(script.Parent.UtilityPlus)
 local ManagerMS = require(script.Manager)
