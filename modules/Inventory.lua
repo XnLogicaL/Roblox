@@ -1,4 +1,4 @@
--- @XnLogicaL 07/11/2023 (Edited)
+-- @XnLogicaL 26/10/2023 (UPDATED 11/07/2023)
 export type Inventory = {
 	Contents: {any},
 	Capacity: number,
