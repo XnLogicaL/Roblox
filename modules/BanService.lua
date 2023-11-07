@@ -1,74 +1,68 @@
--- @XnLogical 17/09/2023 (OUTDATED CODE, REMAKE SOON)
+-- @XnLogical 17/08/2023 (UPDATED 07/11/2023, no time to remake srry)
+export type BanInfo = {
+	Banned: boolean,
+	BannedOn: number,
+	Duration: number,
+	Administrator: number
+}
+local BanTemplate: BanInfo = {
+	Banned = false,
+	BannedOn = nil,
+	Duration = nil,
+	Administrator = nil
+}
+
 local Players = game:GetService("Players")
 local DatastoreService = game:GetService("DataStoreService")
 local Database = DatastoreService:GetDataStore("BanData")
 
 local BanService = {}
 
-local Signal = require(script.Parent.signal)
-BanService.PlayerBanned = Signal.new()
-BanService.PlayerPardoned = Signal.new()
-
-function BanService:Init(UserId: number)
+function BanService.Init(UserId: number)
 	local player = Players:GetPlayerByUserId(UserId)
-	local Info = {	
-		["Banned"] = false,
-		["BannedOn"] = nil,
-		["Duration"] = nil,
-		["Administrator"] = nil
-	}
-	assert(player, "Could not get player by UserId")
+	assert(player, "[BANSERVICE] Could not get player by UserId")
 	
-	if not Database:GetAsync(UserId) then
-		Database:SetAsync(UserId, Info)
-	else
-		local BanInfo = Database:GetAsync(UserId)
-		local CurrentTime = tick()
-		local Banned = BanInfo["Banned"]
-		if Banned then
-			local TimeLeft = BanInfo["Duration"] - ((CurrentTime / 86400) - (BanInfo["BannedOn"] / 86400))
-			if TimeLeft <= 0 then
-				BanService:Pardon(UserId)
-				player:Kick("Your ban has expired. Please rejoin to continue playing.")
-			else
-				player:Kick("You have been banned by a moderator. Days until unban: "..math.round(TimeLeft))
-			end
-		end
+	if Database:GetAsync(UserId) == nil then Database:SetAsync(UserId, BanTemplate) return end
+	local NewBanInfo: BanInfo = Database:GetAsync(UserId)
+	
+	if NewBanInfo.Banned ~= true then return end
+	local TimeLeft = NewBanInfo.Duration - ((tick() / 86400) - (NewBanInfo.BannedOn / 86400))
+		
+	if TimeLeft <= 0 then
+		BanService:Pardon(UserId)
+		player:Kick("[BANSERVICE] Your ban has expired. Please rejoin to continue playing.")
+		return
+	end
+	if TimeLeft > 0 then
+		player:Kick("[BANSERVICE] You have been banned by a moderator. Days until unban: "..math.round(TimeLeft))
+		return
 	end
 end 
 
-function BanService:BanUser(UserId: number, Duration: number, Administrator: number)
+function BanService.BanUser(UserId: number, Duration: number, AdministratorId: number)
 	local Player = Players:GetPlayerByUserId(UserId)
-	local Info = Database:GetAsync(Player.UserId)
-	Info["Banned"] = true
-	Info["BannedOn"] = tick()
-	Info["Duration"] = Duration
-	Info["Administrator"] = Administrator.UserId
+	local Admin = Players:GetPlayerByUserId(AdministratorId)
+	assert(Player, "[BANSERVICE] Could not get player by UserId")
+	assert(Admin, "[BANSERVICE] Could not get administrator by UserId")
 	
-	assert(Player, "Could not get player by UserId")
-	Database.SetAsync(Player.UserId, Info)
+	local NewInfo: BanInfo = Database:GetAsync(Player.UserId)
+	NewInfo.Banned = true
+	NewInfo.BannedOn = tick()
+	NewInfo.Duration = Duration
+	NewInfo.Administrator = AdministratorId
+	
+	Database:SetAsync(Player.UserId, NewInfo)
 	Player:Kick("You have been banned by a moderator. Days until unban: "..Duration)
-	
-	self.PlayerBanned:Fire(Player)
 end
 
-function BanService:Pardon(PlayerId: number)
-	local Info = {	
-		["Banned"] = false,
-		["BannedOn"] = nil,
-		["Duration"] = nil,
-		["Administrator"] = nil
-	}
-	if Database:GetAsync(PlayerId) then
-		if Database.GetAsync(PlayerId).Banned == true then
-			Database:SetAsync(PlayerId, Info)
-			self.PlayerPardoned:Fire(game.Players:GetPlayerByUserId(PlayerId))
-		else
-			return error("[Ban Service] Attempt to pardon unbanned player.")
-		end
-	else
-		return error("[Ban Service] Attempt to ban player: nil, did you forget to initialize?")
-	end
+function BanService.Pardon(UserId: number)
+	assert(Players:GetPlayerByUserId(UserId), "[BANSERVICE] Could not get player from UserId")
+	assert(Database:GetAsync(UserId) ~= nil, "[BANSERVICE] Attempt to ban non existant player; did you forget to initialize?")
+	assert(Database.GetAsync(UserId).Banned ~= false, "[BANSERVICE] Attempt to pardon unbanned player.")
+	
+	Database:SetAsync(UserId, BanTemplate)
 end
+
+return BanService
 
 return BanService
