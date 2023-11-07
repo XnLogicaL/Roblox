@@ -5,7 +5,7 @@
 return function()
 	local Services = {}
 	for _, v in pairs(game:GetChildren()) do
-		table.insert(Services, game:GetService(v.Name))
+		Services[v.Name] = game:GetService(v.Name)
 	end
 	return Services
 end
