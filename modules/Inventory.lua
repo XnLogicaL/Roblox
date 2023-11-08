@@ -1,4 +1,4 @@
--- @XnLogicaL 26/10/2023 (UPDATED 11/07/2023)
+-- @XnLogicaL 29/10/2023 (Edited 11/08/2023)
 export type Inventory = {
 	Contents: {any},
 	Capacity: number,
@@ -17,14 +17,13 @@ export type Inventory = {
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
---// DEPENDENCIES, CHANGE ACCORDINGLY
+
 local Signal = require(script.Parent.signal)
 local Util = require(script.Parent.UtilityPlus)
 local ManagerMS = require(script.Manager)
 
 main_notation = {
-	_get_save_location = function(player: Player) return require(ReplicatedStorage.ProfileManager).Profiles[player].Data end;
-	_save_location_array_name = "Inventory";
+	_save_location = require(ReplicatedStorage.ProfileManager).Profiles;
 	_default_inventory_capacity = 15;
 	_default_inventory_contents = {};
 }
@@ -58,13 +57,17 @@ local function q_is_nil(v: any)
 	end
 end
 
+local function overwrite_inventory(inv: Inventory, plr: Player)
+	main_notation._save_location[plr].Data.Inventory = inv
+end
+
 local function save_inventory(plr)
 	local target_inventory = ManagerMS.Inventories[plr]
 	
 	if q_is_nil(target_inventory) then
-		main_notation._get_save_location(plr)[main_notation._save_location_array_name] = target_inventory
+		overwrite_inventory(target_inventory, plr)
 	else
-		Error("Could not save inventory "..plr.Name.." (inventory does not exist)")
+		Error(`Could not save inventory of {plr.Name} (inventory does not exist)`)
 	end
 end
 
@@ -110,7 +113,7 @@ function Inventory.new(Player: Player, Saves: boolean): Inventory
 	
 	function new_inventory:RemoveItem(ItemName, quantity): (string, number) -> () 
 		local target_item = self.Contents[ItemName]
-		assert(target_item, "Could not process removal "..ItemName.." (entry is nil)")
+		assert(target_item, `[INVENTORYSERVICE] Could not process removal {ItemName} (entry is nil)`)
 		
 		if q_is_nil(quantity) then
 			if target_item == 0 then
@@ -163,7 +166,7 @@ function InventoryManager:RemoveInventory(Player: Player): (Player) -> ()
 		target_inventory:Release()
 		set_nil(target_inventory)
 	else
-		Error("Attempt to remove inventory before initializing ("..Player.Name..")")
+		Error(`Attempt to remove inventory before initializing ({Player.Name})`)
 	end
 end
 
