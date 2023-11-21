@@ -149,10 +149,6 @@ local function assert_string(condition, str)
 	end
 end
 
-local function overwrite_inventory(inv: Inventory, plr: Player)
-	--tba
-end
-
 local function save_inventory(plr)
 	local target_inventory = ManagerMS.Inventories[plr]
 	
