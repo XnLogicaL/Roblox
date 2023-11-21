@@ -10,7 +10,7 @@
 	
 	CHANGELOG:
 	- Added crafting support (use Inventory:Craft())
-	- Added recipe support (use InventoryManager:SetCraftingRecipe())
+	- Added recipe support (use Module:SetCraftingRecipe())
 	- Added Item and Recipe types
 	- Fixed major logic issues
 	- Added better debugging support
@@ -149,6 +149,10 @@ local function assert_string(condition, str)
 	end
 end
 
+local function overwrite_inventory(inv: Inventory, plr: Player)
+	--tba
+end
+
 local function save_inventory(plr)
 	local target_inventory = ManagerMS.Inventories[plr]
 	
@@ -161,9 +165,9 @@ local function save_inventory(plr)
 	end
 end
 
-local InventoryManager = {Manager = ManagerMS, LocalRecipes = {}}
+local Module = {Manager = ManagerMS, LocalRecipes = {}}
 local Inventory = {}
-InventoryManager.__index = InventoryManager
+Module.__index = Module
 Inventory.__index = Inventory
 
 function Inventory.new(Player: Player, Saves: boolean): Inventory
@@ -263,12 +267,12 @@ function Inventory.new(Player: Player, Saves: boolean): Inventory
 		end
 	end
 	
-	table.insert(InventoryManager.Manager, new_inventory)
+	table.insert(Module.Manager, new_inventory)
 	
 	return new_inventory
 end
 
-function InventoryManager:GetInventory(Player: Player): (Player) -> Inventory
+function Module:GetInventory(Player: Player): (Player) -> Inventory
 	client_check()
 	local target_inventory = self.Manager[Player]
 	if target_inventory ~= nil then 
@@ -280,7 +284,7 @@ function InventoryManager:GetInventory(Player: Player): (Player) -> Inventory
 	return target_inventory
 end
 
-function InventoryManager:RemoveInventory(Player: Player): (Player) -> ()
+function Module:RemoveInventory(Player: Player): (Player) -> ()
 	client_check()
 	local target_inventory = self.Manager[Player]
 	if target_inventory ~= nil then
@@ -291,7 +295,7 @@ function InventoryManager:RemoveInventory(Player: Player): (Player) -> ()
 	end
 end
 
-function InventoryManager:SetCraftingRecipe(CraftInfo: Recipe): Recipe
+function Module:SetCraftingRecipe(CraftInfo: Recipe): Recipe
 	client_check()
 	local type_recipe: Recipe = {}
 	assert(type(CraftInfo) == type(type_recipe), String(`CraftInfo expected; got {type(CraftInfo)}`))
@@ -300,10 +304,10 @@ function InventoryManager:SetCraftingRecipe(CraftInfo: Recipe): Recipe
 	self.LocalRecipes[CraftInfo.ID] = CraftInfo
 end
 
-function InventoryManager:OverwriteCraftingRecipe(Recipe: Recipe, NewRecipe: Recipe)
+function Module:OverwriteCraftingRecipe(Recipe: Recipe, NewRecipe: Recipe)
 	assert(self.LocalRecipes[Recipe] ~= nil, String("Attempt to overwrite nil recipe"))
 	self.LocalRecipes[Recipe] = NewRecipe
 end
 
 
-return InventoryManager
+return Module
