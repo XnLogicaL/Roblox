@@ -1,5 +1,12 @@
 -- @XnLogicaL 29/10/2023 (MAJOR UPDATE 13/11/2023)
+-- File: Inventory.lua
 --[[
+
+	Please report any issues to my discord:
+	@ceo_oftaxfraud
+	
+	Or message me on Roblox:
+	@CE0_OfTrolling
 	
 	CHANGELOG:
 	- Added crafting support (use Inventory:Craft())
@@ -10,23 +17,93 @@
 	- Removed some useless functions
 	- Optimization changes
 	
+	HOW TO USE:
+	<-- Module:GetInventory(Player) -->
+		- Yields the inventory
+		- If the player does not have an inventory, creates a new one.
+		
+	<-- Module:RemoveInventory(Player) -->
+		- Removes the player's inventory.
+		
+	<-- Module:SetCraftingRecipe(CraftInfo) -->
+		- Will throw an error if recipe already exists
+		- CraftInfo is a table with the following properties:
+			```lua
+				{
+					ID = "ID",
+					Input = {
+						Item = {...},
+						...
+					},
+					Output = {
+						Item = {...},
+						...
+					}
+				}
+				
+				@example:
+				
+				local Recipe = {
+					ID = "IronSword",
+					Input = {
+						iron,
+						wood,
+					},
+					
+					Output = {
+						iron_sword
+					}
+				}
+			
+			module:SetCraftingRecipe(Recipe)
+			```
+			
+	<-- Module:OverwriteCraftingRecipe(OldRecipe, NewRecipe) -->
+		- Pretty much what it sounds like.
+		
+	<-- Inventory:AddItem(ItemID, Quantity) -->
+		- Adds the specified item to the inventory (self)
+		
+	<-- Inventory:RemoveItem(ItemID, Quantity) -->
+		- Removes the specified item
+		- If no quantity is provided removes the item completely
+	
+	<-- Inventory:HasItem(ItemID) -->
+		- Returns a boolean value
+		- Returns true if the inventory has the item
+		
+	<-- Inventory:Clear() -->
+		- Sets all the keys inside Inventory.Contents to nil, basically clears all the items.
+		
+	<-- Inventory:Release() -->
+		- Saves and deletes the inventory.
+		
+	<-- Inventory:Clone() -->
+		- Returns Inventory.Contents
+		
+	<-- Inventory:Craft(Recipe) -->
+		- Crafts the item if all the conditions required to craft are met.
+		
 	NOTES:
-	- Recipes are LOCAL, they are not saved or replicated
-	- 1 recipe can only have 1 output
-	- Recipes are stored in InventoryManager
+	- I do not recommend using this module on the client.
+	- I recommend ProfileService for inventory saving, it is perfectly made for this.
 	
 ]]--
+local Config = {
+	ClientCheck = true
+}
 export type Item = {
-	ItemName: any, 
-	Quantity: number
+	ItemID: string?,
+	Quantity: number,
+	Rarity: number,
 }
 export type Inventory = {
 	Contents: {Item},
 	Capacity: number,
 	Saves: boolean,
-	GetItemQuantity: (self: string) -> number,
-	AddItem: (self: string, self: number) -> (),
-	RemoveItem: (self: string, self: number) -> (),
+	GetItemQuantity: (ItemID: string) -> number,
+	AddItem: (ItemID: string, Quantity: number) -> (),
+	RemoveItem: (ItemID: string, Quantity: number) -> (),
 	ClearInventory: () -> (),
 	Release: () -> (),
 	Clone: () -> {any},
@@ -36,25 +113,16 @@ export type Inventory = {
 	ItemAddRequestRejected: RBXScriptSignal
 }
 export type Recipe = {
-	RecipeName: string,
-	Ingredient1: Item,
-	Ingredient2: Item,
-	Ingredient3: Item,
-	CraftedItem: Item,
+	ID: string,
+	Input: {Item},
+	Output: {Item},
 }
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 
 local Signal = require(script.Parent.signal)
-local Util = require(script.Parent.UtilityPlus)
 local ManagerMS = require(script.Manager)
-
-main_notation = {
-	_save_location = require(ReplicatedStorage.ProfileManager).Profiles;
-	_default_inventory_capacity = 15;
-	_default_inventory_contents = {};
-}
 
 local function Error(...: string?)
 	return error("[INVENTORYSERVICE] ".. ...)
@@ -69,8 +137,9 @@ local function String(...: string?)
 end
 
 local function client_check()
+	if not Config.ClientCheck then return end
 	if game:GetService("RunService"):IsClient() then
-		Error("attempt to run on client")
+		game.Players.LocalPlayer:Kick("attempt to run server-only module on client")
 	end
 end
 
@@ -81,20 +150,22 @@ local function assert_string(condition, str)
 end
 
 local function overwrite_inventory(inv: Inventory, plr: Player)
-	main_notation._save_location[plr].Data.Inventory = inv
+	--tba
 end
 
 local function save_inventory(plr)
 	local target_inventory = ManagerMS.Inventories[plr]
 	
 	if target_inventory ~= nil then
-		overwrite_inventory(target_inventory, plr)
+		-- TODO:
+		-- ADD SAVE FUNCTIONALITY
+		-- USE PROFILESERVICE PLS
 	else
 		Error(`Could not save inventory of {plr.Name} (inventory does not exist)`)
 	end
 end
 
-local InventoryManager = {Manager = ManagerMS.Inventories, LocalRecipes = {}}
+local InventoryManager = {Manager = ManagerMS, LocalRecipes = {}}
 local Inventory = {}
 InventoryManager.__index = InventoryManager
 Inventory.__index = Inventory
@@ -105,54 +176,61 @@ function Inventory.new(Player: Player, Saves: boolean): Inventory
 	if Saves ~= nil then
 		saves_default = Saves
 	end
-	local new_inventory = {}
+	local new_inventory: Inventory = {}
 	new_inventory.Saves = saves_default
-	new_inventory.Contents = main_notation._default_inventory_contents
-	new_inventory.Capacity = main_notation._default_inventory_capacity
+	new_inventory.Contents = {}
+	new_inventory.Capacity = 15
 	new_inventory.ItemAdded = Signal.new()
 	new_inventory.ItemRemoving = Signal.new()
 	new_inventory.InventoryCleared = Signal.new()
 	new_inventory.ItemAddRequestRejected = Signal.new()
 	
-	function new_inventory:GetItemQuantity(ItemName): (string) -> number
+	function new_inventory:GetItemQuantity(ItemID): (string) -> number
 		client_check()
-		local target_item = self.Contents[ItemName]
+		local target_item = self.Contents[ItemID]
 		
 		if target_item ~= nil then
-			return self.Contents[ItemName]
+			return self.Contents[ItemID]
 		else
 			return nil
 		end
 	end
 	
-	function new_inventory:AddItem(ItemName, quantity): (string, number) -> () 
+	function new_inventory:AddItem(ItemID, quantity): (string, number) -> () 
 		client_check()
-		local target_item = self.Contents[ItemName]
+		local target_item = self.Contents[ItemID]
 		if #self.Contents >= self.Capacity then self.ItemAddRequestRejected:Fire("inventory_full") return end
 		if target_item ~= nil then
-			self.Contents[ItemName] += quantity
+			self.Contents[ItemID] += quantity
 		else
-			self.Contents[ItemName] = quantity
+			self.Contents[ItemID] = quantity
 		end
-		self.ItemAdded:Fire(ItemName)
+		self.ItemAdded:Fire(ItemID)
 	end
 	
-	function new_inventory:RemoveItem(ItemName, quantity): (string, number) -> () 
+	function new_inventory:RemoveItem(ItemID, quantity): (string, number) -> () 
 		client_check()
-		local target_item = self.Contents[ItemName]
-		assert(target_item, String(`[INVENTORYSERVICE] Could not process removal {ItemName} (entry is nil)`))
+		local target_item = self.Contents[ItemID]
+		assert(target_item, String(`[INVENTORYSERVICE] Could not process removal {ItemID} (entry is nil)`))
 		
 		if quantity ~= nil then
 			if target_item == 0 then
-				self.Contents[ItemName] = nil
+				self.Contents[ItemID] = nil
 				return
 			end
-			self.Contents[ItemName] -= quantity
+			self.Contents[ItemID] -= quantity
 		else
-			self.Contents[ItemName] = nil
+			self.Contents[ItemID] = nil
 		end
-		self.ItemRemoving:Fire(ItemName)
+		self.ItemRemoving:Fire(ItemID)
 	end
+	
+	function new_inventory:HasItem(ItemID): () -> boolean
+		if self.Contents[ItemID] ~= nil then
+			return true
+		end
+		return false
+	end 
 	
 	function new_inventory:ClearInventory(): () -> ()
 		client_check()
@@ -174,23 +252,18 @@ function Inventory.new(Player: Player, Saves: boolean): Inventory
 		return self.Contents
 	end
 	
-	function new_inventory:Craft(Recipe: Recipe)
+	function new_inventory:Craft(Recipe: Recipe): (Recipe) -> ()
 		client_check()
-		assert_string(self.Contents[Recipe.Ingredient1.ItemName] == nil, "missing_ingredient1")
-		assert_string(self.Contents[Recipe.Ingredient2.ItemName] == nil, "missing_ingredient2")
-		assert_string(self.Contents[Recipe.Ingredient1.ItemName] < Recipe.Ingredient1.Quantity, "insufficient_quantity1")
-		assert_string(self.Contents[Recipe.Ingredient2.ItemName] < Recipe.Ingredient2.Quantity, "insufficient_quantity2")
+		assert_string(self.Contents[Recipe.Ingredient1.ItemID] == nil, "missing_ingredient1")
+		assert_string(self.Contents[Recipe.Ingredient2.ItemID] == nil, "missing_ingredient2")
+		assert_string(self.Contents[Recipe.Ingredient1.ItemID] < Recipe.Ingredient1.Quantity, "insufficient_quantity1")
+		assert_string(self.Contents[Recipe.Ingredient2.ItemID] < Recipe.Ingredient2.Quantity, "insufficient_quantity2")
 		
-		local result, err = pcall(function()
-			self:RemoveItem(Recipe.Ingredient1.ItemName, Recipe.Ingredient1.Quantity)
-			self:RemoveItem(Recipe.Ingredient2.ItemName, Recipe.Ingredient2.Quantity)
-			self:AddItem(Recipe.CraftedItem.ItemName, Recipe.CraftedItem.Quantity)
-		end)
-		
-		if result then
-			return tostring(result)
-		else
-			return tostring(err)
+		for _, v in pairs(Recipe.Input) do
+			self:RemoveItem(v.ItemID, v.Quantity)
+		end
+		for _, v in pairs(Recipe.Output) do
+			self:AddItem(v.ItemID, v.Quantity)
 		end
 	end
 	
@@ -224,28 +297,17 @@ end
 
 function InventoryManager:SetCraftingRecipe(CraftInfo: Recipe): Recipe
 	client_check()
-	local new_recipe: Recipe = {}
-	assert(type(CraftInfo) == type(new_recipe), String(`CraftInfo expected; got {type(CraftInfo)}`))
-	assert(self.LocalRecipes[CraftInfo.RecipeName] == nil, String(`Recipe name already exists; use :OverwriteRecipe()`))
+	local type_recipe: Recipe = {}
+	assert(type(CraftInfo) == type(type_recipe), String(`CraftInfo expected; got {type(CraftInfo)}`))
+	assert(self.LocalRecipes[CraftInfo.ID] == nil, String(`Recipe name already exists; use :OverwriteRecipe()`))
 	
-	new_recipe.RecipeName = CraftInfo.RecipeName
-	new_recipe.Ingredient1 = CraftInfo.Ingredient1
-	new_recipe.CraftedItem = CraftInfo.CraftedItem
-	if CraftInfo.Ingredient2 ~= nil then
-		new_recipe.Ingredient2 = CraftInfo.Ingredient2
-	end
-	if CraftInfo.Ingredient3 ~= nil then
-		new_recipe.Ingredient3 = CraftInfo.Ingredient3
-	end
-	
-	self.LocalRecipes[CraftInfo.RecipeName] = new_recipe
-	
-	return new_recipe
+	self.LocalRecipes[CraftInfo.ID] = CraftInfo
 end
 
 function InventoryManager:OverwriteCraftingRecipe(Recipe: Recipe, NewRecipe: Recipe)
 	assert(self.LocalRecipes[Recipe] ~= nil, String("Attempt to overwrite nil recipe"))
 	self.LocalRecipes[Recipe] = NewRecipe
 end
+
 
 return InventoryManager
