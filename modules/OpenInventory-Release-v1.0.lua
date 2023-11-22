@@ -1,5 +1,3 @@
---#Dependencies
---#Signal
 -- @XnLogicaL 29/10/2023 (MAJOR UPDATE 13/11/2023)
 -- File: Inventory.lua
 --[[
@@ -278,7 +276,7 @@ function Module:GetInventory(Player: Player): (Player) -> Inventory
 	if target_inventory ~= nil then 
 		return target_inventory
 	else
-		target_inventory = newInventory(Player)
+		self._manager[Player] = newInventory(Player)
 	end
 
 	return target_inventory
