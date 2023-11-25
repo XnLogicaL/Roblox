@@ -1,100 +1,57 @@
--- @XnLogicaL 29/10/2023 (MAJOR UPDATE 13/11/2023)
--- File: Inventory.lua
 --[[
 
-	Please report any issues to my discord:
-	@ceo_oftaxfraud
-	
-	Or message me on Roblox:
-	@CE0_OfTrolling
-	
-	Feel free to change, edit, distribute this module as long as you credit me.
-	
-	HOW TO USE:
-	<-- Module:GetInventory(Player) -->
-		- Returns the player's inventory
-		- If the player does not have an inventory, returns a blank one.
-		
-	<-- Module:RemoveInventory(Player) -->
-		- Removes the player's inventory.
-		
-	<-- Module:SetCraftingRecipe(CraftInfo) -->
-		- Will throw an error if recipe already exists
-		- CraftInfo is a table with the following properties:
-			```lua
-				{
-					ID = "ID",
-					Input = {
-						Item = {...},
-						...
-					},
-					Output = {
-						Item = {...},
-						...
-					}
-				}
-				
-				@example:
-				
-				local Recipe = {
-					ID = "IronSword",
-					Input = {
-						iron = {
-							ItemID = "iron",
-							Quantity = 2
-						},
-						wood = {
-							ItemID = "wood",
-							Quantity = 1
-						},
-					},
-					
-					Output = {
-						iron_sword = {
-							ItemID = "iron_sword",
-							Quantity = 1
-						}
-					}
-				}
-			
-				module:SetCraftingRecipe(Recipe)
-			```
-			
-	<-- Module:OverwriteCraftingRecipe(OldRecipe, NewRecipe) -->
-		- Pretty much what it sounds like.
-		
-	<-- Inventory:AddItem(ItemID, Quantity) -->
-		- Adds the specified item to the inventory (self)
-		
-	<-- Inventory:RemoveItem(ItemID, Quantity) -->
-		- Removes the specified item
-		- If no quantity is provided removes the item completely
-		
-	<-- Inventory:GetQuantity(ItemID) -->
-		- Returns the quantity of the item
-		- Returns 0 if the item is nil/null
-	
-	<-- Inventory:HasItem(ItemID) -->
-		- Returns a boolean value
-		- Returns true if the inventory has the item
-		
-	<-- Inventory:Clear() -->
-		- Sets all the keys inside Inventory.Contents to nil, basically clears all the items.
-		
-	<-- Inventory:Release() -->
-		- Saves and deletes the inventory.
-		- Only use when you are done with it.
-		
-	<-- Inventory:Clone() -->
-		- Esentially returns Inventory.Contents
-		
-	<-- Inventory:Craft(Recipe) -->
-		- Crafts the item if all the conditions required to craft are met.
-		
-	NOTES:
-	- I heavily discourage using this module on the client.
-	- I recommend ProfileService for inventory saving, it is perfectly made for this.
-	
+	Author: @XnLogicaL (@CE0_OfTrolling)
+
+	OpenInventory@v1.0
+
+	@Dependencies: Signal, Manager(module with just ```return {}```)
+
+	How to use:
+	- module:GetInventory(Player Player)
+		gets the targeted player's inventory, if it doesn't exist, creates a new one
+		@returns InventoryInstance
+
+	- module:RemoveInventory(Player Player)
+		removes the player's inventory from module._manager
+		@returns nil
+
+	- module:SetCraftingRecipe(Recipe CraftInfo)
+		sets the module._local[CraftInfo.ID] to the provided recipe
+		@returns nil
+
+	- module:OverwriteCraftingRecipe(Recipe OldRecipe, Recipe NewRecipe)
+		replaces @OldRecipe's key with @NewRecipe's key
+		@returns nil
+
+	- InventoryInstance:GetQuantity(string ItemID)
+		returns the targeted items quantity
+		@returns number
+
+	- InventoryInstance:AddItem(string ItemID, number Quantity)
+		inserts the provided item to the InventoryInstance.Contents, if it does exist adds quantity to the key.
+		@returns nil
+
+	- InventoryInstance:RemoveItem(string ItemID, number Quantity)
+		@optional quantity
+		if no quantity is provided, removes all the itesm under ItemID, if provided, subtracts quantity from the ItemID
+		@returns nil
+
+	- InventoryInstance:HasItem(string ItemID)
+		checks if the InventoryInstance[ItemID] is valid
+		@returns boolean
+
+	- InventoryInstance:Clear()
+		sets all the keys of InventoryInstance.Contents to nil, essentially removes eveerything from the inventory.
+		@returns nil
+
+	- InventoryInstance:Clone()
+		safely clones the contents of the inventory
+		@returns table @containing item
+
+	- InventoryInstance:Craft(Recipe Recipe)
+		Crafts the provided recipe, if an ingredient is insufficient fires the InventoryInstance._craft_fail event
+		@returns nil
+
 ]]--
 local Config = {
 	ClientCheck = true -- Heavily recommended
