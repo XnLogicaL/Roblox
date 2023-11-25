@@ -104,9 +104,10 @@ local function String(...: string)
 end
 
 local function client_check()
-	if not Config.ClientCheck then return end
-	if game:GetService("RunService"):IsClient() then
-		Players.LocalPlayer:Kick("attempt to run server-only module on client")
+	if Config.ClientCheck then
+		if game:GetService("RunService"):IsClient() then
+			Players.LocalPlayer:Kick("attempt to run server-only module on client")
+		end
 	end
 end
 
