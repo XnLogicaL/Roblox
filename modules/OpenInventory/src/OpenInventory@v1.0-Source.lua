@@ -54,7 +54,9 @@
 
 ]]--
 local Config = {
-	ClientCheck = true -- Heavily recommended
+	ClientCheck = true, -- Heavily recommended
+	Manager = require(script.Manager),
+	Signal = require(script.Signal)
 }
 export type Item = {
 	ItemID: string?,
@@ -94,8 +96,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 local Players = game:GetService("Players")
 
-local Signal = require(script.Signal)
-local ManagerMS = require(script.Manager)
+local Signal = Config.Signal
+local ManagerMS = Config.Manager
 
 local function String(...: string)
 	return "[INVENTORYSERVICE] ▶ ".. ...
