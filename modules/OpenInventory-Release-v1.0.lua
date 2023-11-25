@@ -10,9 +10,6 @@
 	
 	Feel free to change, edit, distribute this module as long as you credit me.
 	
-	CHANGELOG:
-	- Minor changes to API
-	
 	HOW TO USE:
 	<-- Module:GetInventory(Player) -->
 		- Returns the player's inventory
