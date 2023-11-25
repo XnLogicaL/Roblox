@@ -10,8 +10,8 @@
 	
 ]]
 
-local minLen = 8
-local minDistChar = 5
+local minLen = 8 -- Minimum string length
+local minDistChar = 5 -- Minimum distinct character threshold
 
 -- Do not edit past this line
 local function _numCheck(str: string)
