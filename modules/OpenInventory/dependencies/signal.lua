@@ -1,7 +1,5 @@
-
 --!strict
--- @CE0_OfTrolling
--- File: Signal.lua
+-- Author: Unknown
 
 local Signal = {}
 
