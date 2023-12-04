@@ -2,9 +2,12 @@
 
 	Author: @XnLogicaL (@CE0_OfTrolling)
 
-	OpenInventory@v1.0
-
-	@Dependencies: Signal, Manager(module with just ```return {}```)
+	OpenInventory@v1.0b
+	@ChangeLog
+	- String optimizations
+	- Minor bug fixes
+	
+	@Dependencies: Signal, Manager(module with just """return {}""")
 
 	How to use:
 	- module:GetInventory(Player Player)
@@ -72,7 +75,7 @@ export type Inventory = {
 	RemoveItem: (ItemID: string, Quantity: number) -> (),
 	ClearInventory: () -> (),
 	Release: () -> (),
-	Clone: () -> {any},
+	Clone: () -> {Item},
 	ItemAdded: RBXScriptSignal,
 	ItemRemoved: RBXScriptSignal,
 	InventoryCleared: RBXScriptSignal,
@@ -92,21 +95,22 @@ export type Module = {
 	OverwriteCraftingRecipe: (oldRecipe: Recipe, newRecipe: Recipe) -> ()
 }
 
+local EXPECTED_GOT = "%s expected, got %s"
+local FAILED_TO = "could not %s, %s"
+local ATTEMPT_TO = "attempt to %s"
+
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 local Players = game:GetService("Players")
 
-local Signal = Config.Signal
-local ManagerMS = Config.Manager
-
 local function String(...: string)
-	return "[INVENTORYSERVICE] ▶ ".. ...
+	return ("[INVENTORYSERVICE] ▶ %s"):format(...)
 end
 
 local function client_check()
 	if Config.ClientCheck then
 		if game:GetService("RunService"):IsClient() then
-			Players.LocalPlayer:Kick("attempt to run server-only module on client")
+			Players.LocalPlayer:Kick(ATTEMPT_TO:format("run server-only module on client"))
 		end
 	end
 end
@@ -118,7 +122,7 @@ local function assert_string(condition: boolean, str: string): string | nil
 	return nil
 end
 
-local Module = {_manager = ManagerMS, _local = {}}
+local Module = {_manager = Config.Manager, _local = {}}
 Module.__index = Module
 Module.SaveFunction = function(Player: Player, InventoryToSave: Inventory)
 	-- TODO: ADD SAVE FUNCTIONALITY WITH YOUR PREFERED DATASTORE SERVICE.
@@ -130,13 +134,13 @@ function newInventory(Player: Player, Saves: boolean): Inventory
 	new_inventory._saves = Saves or true -- Default: true
 	new_inventory.Contents = {} -- Default: {}
 	new_inventory.Capacity = 15 -- Default: 15
-	new_inventory.ItemAdded = Signal.new()
-	new_inventory.ItemRemoving = Signal.new()
-	new_inventory.InventoryCleared = Signal.new()
+	new_inventory.ItemAdded = Config.Signal.new()
+	new_inventory.ItemRemoving = Config.Signal.new()
+	new_inventory.InventoryCleared = Config.Signal.new()
 	---- DEBUGGING ----
-	new_inventory._add_fail = Signal.new()
-	new_inventory._remove_fail = Signal.new()
-	new_inventory._craft_fail = Signal.new()
+	new_inventory._add_fail = Config.Signal.new()
+	new_inventory._remove_fail = Config.Signal.new()
+	new_inventory._craft_fail = Config.Signal.new()
 
 	function new_inventory:GetQuantity(ItemID: string): (string) -> number
 		client_check()
@@ -164,7 +168,7 @@ function newInventory(Player: Player, Saves: boolean): Inventory
 	function new_inventory:RemoveItem(ItemID, quantity): (string, number) -> () 
 		client_check()
 		local target_item = self.Contents[ItemID]
-		assert(target_item, String(`Could not process removal {ItemID} (entry is nil)`))
+		assert(target_item, String(FAILED_TO:format("process item removal", "item quantity is 0")))
 
 		if quantity ~= nil then
 			if target_item == 0 then
@@ -246,23 +250,23 @@ function Module:RemoveInventory(Player: Player): (Player) -> ()
 		target_inventory:Release()
 		self._manager[Player] = nil
 	else
-		error(`[INVENTORYSERVICE] ▶ Attempt to remove inventory before initializing ({Player.Name})`)
+		warn(String(("Could not remove inventory of %s, likely due to not being initialized"):format(Player.Name)))
 	end
-end
+end               
 
 function Module:SetCraftingRecipe(CraftInfo: Recipe): Recipe
 	client_check()
 	local RecipeType: Recipe = {}
-	assert(typeof(CraftInfo) == typeof(RecipeType), String(`CraftInfo expected; got {typeof(CraftInfo)}`))
-	assert(self._local[CraftInfo.ID] == nil, String(`Recipe ID already exists; use :OverwriteRecipe()`))
+	assert(typeof(CraftInfo) == typeof(RecipeType), String(EXPECTED_GOT:format("CraftInfo", typeof(CraftInfo))))
+	assert(self._local[CraftInfo.ID] == nil, String("Recipe ID already exists; use :OverwriteRecipe()"))
 
 	self._local[CraftInfo.ID] = CraftInfo
 end
 
 function Module:OverwriteCraftingRecipe(Recipe: Recipe, NewRecipe: Recipe)
 	client_check()
-	assert(typeof(NewRecipe) == typeof(Recipe), String(`CraftInfo expected; got {typeof(NewRecipe)}`))
-	assert(self._local[Recipe] ~= nil, String("Could not overwrite; recipe is nil"))
+	assert(typeof(NewRecipe) == typeof(Recipe), String(EXPECTED_GOT:format("CraftInfo", typeof(NewRecipe))))
+	assert(self._local[Recipe] ~= nil, String(FAILED_TO:format("overwrite", "recipe is missing or nil")))
 	self._local[Recipe] = NewRecipe
 end
 
